@@ -10,6 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tiptap/extension-placeholder": "^3.24.0",
+    "@tiptap/react": "^3.24.0",
+    "@tiptap/starter-kit": "^3.24.0",
     "autoprefixer": "^10.5.0",
     "dexie": "^4.4.3",
     "lucide-react": "^1.17.0",
