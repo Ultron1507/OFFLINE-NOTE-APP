@@ -1,18 +1,19 @@
-import { ArchiveX, FilePlus2, Search } from 'lucide-react'
-import { useMemo } from 'react'
+import { ArchiveX, FilePlus2, Menu, Search, Trash2 } from 'lucide-react'
+import { useMemo, useRef } from 'react'
 import { useNoteStore } from '../store/useNoteStore.js'
 import { formatUpdatedAt } from '../utils/notes.js'
 import { EmptyState } from './EmptyState.jsx'
+import { StatusIndicator } from './StatusIndicator.jsx'
 
-export function NotesList() {
+export function NotesList({ onOpenMenu, onOpenSearch, onOpenEditor, onCreateNote }) {
   const notes = useNoteStore((state) => state.notes)
   const query = useNoteStore((state) => state.query)
   const filter = useNoteStore((state) => state.filter)
   const activeTag = useNoteStore((state) => state.activeTag)
   const selectedId = useNoteStore((state) => state.selectedId)
   const selectNote = useNoteStore((state) => state.selectNote)
-  const createNote = useNoteStore((state) => state.createNote)
-  const setQuery = useNoteStore((state) => state.setQuery)
+  const moveToTrash = useNoteStore((state) => state.moveToTrash)
+  const touchStart = useRef(null)
 
   const filteredNotes = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase()
@@ -45,9 +46,32 @@ export function NotesList() {
           ? `#${activeTag}`
           : 'All Notes'
 
+  const openNote = (id) => {
+    selectNote(id)
+    onOpenEditor?.()
+  }
+
+  const handlePointerDown = (event, id) => {
+    touchStart.current = { id, x: event.clientX, y: event.clientY }
+  }
+
+  const handlePointerUp = (event, note) => {
+    if (!touchStart.current || touchStart.current.id !== note.id) return
+    const deltaX = event.clientX - touchStart.current.x
+    const deltaY = Math.abs(event.clientY - touchStart.current.y)
+    touchStart.current = null
+
+    if (!note.trashed && deltaX < -78 && deltaY < 44) {
+      moveToTrash(note.id)
+    }
+  }
+
   return (
     <section className="notes-list" aria-label="Notes">
       <div className="mobile-topbar">
+        <button className="icon-button" onClick={onOpenMenu} aria-label="Open menu">
+          <Menu size={21} aria-hidden="true" />
+        </button>
         <div className="mobile-brand">
           <span className="brand-mark" aria-hidden="true">
             N
@@ -57,27 +81,20 @@ export function NotesList() {
             <p>Offline notes</p>
           </div>
         </div>
-        <button className="icon-button" onClick={createNote} aria-label="Create note">
-          <FilePlus2 size={19} aria-hidden="true" />
-        </button>
+        <StatusIndicator compact />
       </div>
 
-      <div className="mobile-search">
-        <Search size={17} aria-hidden="true" />
-        <input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search notes"
-          aria-label="Search notes"
-        />
-      </div>
+      <button className="mobile-search-trigger" onClick={onOpenSearch}>
+        <Search size={18} aria-hidden="true" />
+        <span>{query || 'Search notes'}</span>
+      </button>
 
       <header className="list-header">
         <div>
           <p className="eyebrow">{filteredNotes.length} notes</p>
           <h2>{heading}</h2>
         </div>
-        <button className="icon-button" onClick={createNote} aria-label="Create note">
+        <button className="icon-button desktop-create" onClick={onCreateNote} aria-label="Create note">
           <FilePlus2 size={19} aria-hidden="true" />
         </button>
       </header>
@@ -88,8 +105,14 @@ export function NotesList() {
             <button
               key={note.id}
               className={selectedId === note.id ? 'note-card active' : 'note-card'}
-              onClick={() => selectNote(note.id)}
+              onClick={() => openNote(note.id)}
+              onPointerDown={(event) => handlePointerDown(event, note.id)}
+              onPointerUp={(event) => handlePointerUp(event, note)}
             >
+              <span className="note-swipe-hint">
+                <Trash2 size={15} aria-hidden="true" />
+                Swipe left
+              </span>
               <span className="note-card-title">{note.title || 'Untitled note'}</span>
               <span className="note-preview">{note.text || 'No content yet'}</span>
               <span className="note-meta">
@@ -108,10 +131,14 @@ export function NotesList() {
             title="Nothing here yet"
             message="Create a note or change your search to bring ideas back into view."
             action="Create note"
-            onAction={createNote}
+            onAction={onCreateNote}
           />
         )}
       </div>
+
+      <button className="mobile-fab" onClick={onCreateNote} aria-label="Create note">
+        <FilePlus2 size={24} aria-hidden="true" />
+      </button>
     </section>
   )
 }

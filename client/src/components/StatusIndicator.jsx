@@ -2,7 +2,7 @@ import { RefreshCw } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNoteStore } from '../store/useNoteStore.js'
 
-export function StatusIndicator() {
+export function StatusIndicator({ compact = false }) {
   const [online, setOnline] = useState(navigator.onLine)
   const syncing = useNoteStore((state) => state.syncing)
   const simulateSync = useNoteStore((state) => state.simulateSync)
@@ -22,7 +22,12 @@ export function StatusIndicator() {
   }, [online, simulateSync])
 
   return (
-    <button className="status-card" onClick={simulateSync} aria-live="polite">
+    <button
+      className={compact ? 'status-card compact' : 'status-card'}
+      onClick={simulateSync}
+      aria-live="polite"
+      aria-label={online ? 'Online. Sync workspace.' : 'Offline. Changes are saved locally.'}
+    >
       <span className={online ? 'status-dot online' : 'status-dot offline'} />
       <span>{online ? 'Online' : 'Offline'}</span>
       {online && <RefreshCw size={15} className={syncing ? 'spin' : ''} aria-hidden="true" />}

@@ -1,25 +1,28 @@
+import Placeholder from '@tiptap/extension-placeholder'
 import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
-import Placeholder from '@tiptap/extension-placeholder'
 import {
+  ArrowLeft,
   Bold,
   Heading2,
   Italic,
   List,
   ListOrdered,
+  MoreHorizontal,
   RotateCcw,
   Sparkles,
   Star,
   Tags,
   Trash2,
   Wand2,
+  X,
 } from 'lucide-react'
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNoteStore } from '../store/useNoteStore.js'
 import { createSummary, formatUpdatedAt, stripHtml, suggestTags } from '../utils/notes.js'
 import { EmptyState } from './EmptyState.jsx'
 
-export function EditorPane() {
+export function EditorPane({ mobileOpen, onBack }) {
   const notes = useNoteStore((state) => state.notes)
   const selectedId = useNoteStore((state) => state.selectedId)
   const updateNote = useNoteStore((state) => state.updateNote)
@@ -31,6 +34,7 @@ export function EditorPane() {
   const noteId = currentNote?.id
   const noteContent = currentNote?.content
   const currentId = useRef(selectedId)
+  const [actionsOpen, setActionsOpen] = useState(false)
 
   const editor = useEditor({
     extensions: [
@@ -117,11 +121,17 @@ export function EditorPane() {
     { label: 'Numbered list', icon: ListOrdered, action: () => editor?.chain().focus().toggleOrderedList().run(), active: editor?.isActive('orderedList') },
   ]
 
+  const wordCount = stripHtml(currentNote.content).trim().split(/\s+/).filter(Boolean).length
+
   return (
-    <main className="editor-pane">
+    <main className={mobileOpen ? 'editor-pane mobile-open' : 'editor-pane'}>
       <header className="editor-header">
-        <div>
+        <button className="icon-button mobile-back" onClick={onBack} aria-label="Back to notes">
+          <ArrowLeft size={20} aria-hidden="true" />
+        </button>
+        <div className="editor-title-meta">
           <p className="eyebrow">{currentNote.trashed ? 'In trash' : 'Editing note'}</p>
+          <p className="mobile-editor-title">{currentNote.title || 'Untitled note'}</p>
           <p className="last-saved">Saved locally {formatUpdatedAt(currentNote.updatedAt)}</p>
         </div>
         <div className="header-actions">
@@ -139,8 +149,11 @@ export function EditorPane() {
               >
                 <Star size={18} aria-hidden="true" />
               </button>
-              <button className="icon-button danger" onClick={() => moveToTrash(currentNote.id)} aria-label="Move to trash">
+              <button className="icon-button desktop-danger danger" onClick={() => moveToTrash(currentNote.id)} aria-label="Move to trash">
                 <Trash2 size={18} aria-hidden="true" />
+              </button>
+              <button className="icon-button mobile-more" onClick={() => setActionsOpen(true)} aria-label="More actions">
+                <MoreHorizontal size={20} aria-hidden="true" />
               </button>
             </>
           )}
@@ -171,7 +184,7 @@ export function EditorPane() {
           </button>
           <button onClick={() => runAiAction('improve')}>
             <Sparkles size={16} aria-hidden="true" />
-            Improve Writing
+            Improve
           </button>
         </div>
 
@@ -195,6 +208,29 @@ export function EditorPane() {
 
         <EditorContent editor={editor} />
       </div>
+
+      <footer className="editor-bottom-bar">
+        <span>{wordCount} words</span>
+        <span>Saved {formatUpdatedAt(currentNote.updatedAt)}</span>
+      </footer>
+
+      <div className={actionsOpen ? 'sheet-backdrop open' : 'sheet-backdrop'} onClick={() => setActionsOpen(false)} />
+      <section className={actionsOpen ? 'mobile-sheet open' : 'mobile-sheet'} aria-label="Note actions">
+        <div className="sheet-handle" />
+        <div className="sheet-header">
+          <div>
+            <p className="eyebrow">Actions</p>
+            <h2>{currentNote.title || 'Untitled note'}</h2>
+          </div>
+          <button className="icon-button" onClick={() => setActionsOpen(false)} aria-label="Close actions">
+            <X size={18} aria-hidden="true" />
+          </button>
+        </div>
+        <button className="sheet-action danger" onClick={() => moveToTrash(currentNote.id)}>
+          <Trash2 size={18} aria-hidden="true" />
+          <span>Move to trash</span>
+        </button>
+      </section>
     </main>
   )
 }

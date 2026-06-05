@@ -1,4 +1,4 @@
-import { FileText, Plus, Search, Star, Tag, Trash2 } from 'lucide-react'
+import { Download, FileText, Plus, Search, Star, Tag, Trash2, X } from 'lucide-react'
 import { useMemo } from 'react'
 import { useNoteStore } from '../store/useNoteStore.js'
 import { StatusIndicator } from './StatusIndicator.jsx'
@@ -10,7 +10,7 @@ const navItems = [
   { id: 'trash', label: 'Trash', icon: Trash2 },
 ]
 
-export function Sidebar() {
+export function Sidebar({ open, onClose, onCreateNote, onNavigate, canInstall, onInstall }) {
   const notes = useNoteStore((state) => state.notes)
   const query = useNoteStore((state) => state.query)
   const filter = useNoteStore((state) => state.filter)
@@ -18,77 +18,94 @@ export function Sidebar() {
   const setQuery = useNoteStore((state) => state.setQuery)
   const setFilter = useNoteStore((state) => state.setFilter)
   const setActiveTag = useNoteStore((state) => state.setActiveTag)
-  const createNote = useNoteStore((state) => state.createNote)
 
   const tags = useMemo(() => {
     return [...new Set(notes.flatMap((note) => note.tags))].sort()
   }, [notes])
 
+  const navigate = (callback) => {
+    callback()
+    onNavigate?.()
+    onClose?.()
+  }
+
   return (
-    <aside className="sidebar" aria-label="Workspace navigation">
-      <div className="sidebar-header">
-        <div className="brand-mark" aria-hidden="true">
-          N
+    <>
+      <div className={open ? 'drawer-backdrop open' : 'drawer-backdrop'} onClick={onClose} />
+      <aside className={open ? 'sidebar open' : 'sidebar'} aria-label="Workspace navigation">
+        <div className="sidebar-header">
+          <div className="brand-mark" aria-hidden="true">
+            N
+          </div>
+          <div>
+            <h1>NoteFlow</h1>
+            <p>Offline AI notes</p>
+          </div>
+          <button className="icon-button drawer-close" onClick={onClose} aria-label="Close menu">
+            <X size={18} aria-hidden="true" />
+          </button>
         </div>
-        <div>
-          <h1>NoteFlow</h1>
-          <p>Offline AI notes</p>
+
+        <div className="search-field">
+          <Search size={17} aria-hidden="true" />
+          <input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search notes"
+            aria-label="Search notes"
+          />
         </div>
-      </div>
 
-      <div className="search-field">
-        <Search size={17} aria-hidden="true" />
-        <input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="Search notes"
-          aria-label="Search notes"
-        />
-      </div>
+        <button className="primary-action" onClick={onCreateNote}>
+          <Plus size={18} aria-hidden="true" />
+          New Note
+        </button>
 
-      <button className="primary-action" onClick={createNote}>
-        <Plus size={18} aria-hidden="true" />
-        New Note
-      </button>
-
-      <nav className="sidebar-nav">
-        {navItems.map((item) => {
-          const Icon = item.icon
-          const active = filter === item.id
-          return (
-            <button
-              key={item.id}
-              className={active ? 'nav-item active' : 'nav-item'}
-              onClick={() => setFilter(item.id)}
-              aria-current={active ? 'page' : undefined}
-            >
-              <Icon size={18} aria-hidden="true" />
-              <span>{item.label}</span>
-            </button>
-          )
-        })}
-      </nav>
-
-      <section className="tag-section" aria-label="Tags">
-        <div className="section-label">Tags</div>
-        <div className="tag-cloud">
-          {tags.length ? (
-            tags.map((tag) => (
+        <nav className="sidebar-nav">
+          {navItems.map((item) => {
+            const Icon = item.icon
+            const active = filter === item.id
+            return (
               <button
-                key={tag}
-                className={activeTag === tag ? 'tag-pill active' : 'tag-pill'}
-                onClick={() => setActiveTag(tag)}
+                key={item.id}
+                className={active ? 'nav-item active' : 'nav-item'}
+                onClick={() => navigate(() => setFilter(item.id))}
+                aria-current={active ? 'page' : undefined}
               >
-                #{tag}
+                <Icon size={18} aria-hidden="true" />
+                <span>{item.label}</span>
               </button>
-            ))
-          ) : (
-            <p className="muted-copy">Tags appear as you write.</p>
-          )}
-        </div>
-      </section>
+            )
+          })}
+        </nav>
 
-      <StatusIndicator />
-    </aside>
+        <section className="tag-section" aria-label="Tags">
+          <div className="section-label">Tags</div>
+          <div className="tag-cloud">
+            {tags.length ? (
+              tags.map((tag) => (
+                <button
+                  key={tag}
+                  className={activeTag === tag ? 'tag-pill active' : 'tag-pill'}
+                  onClick={() => navigate(() => setActiveTag(tag))}
+                >
+                  #{tag}
+                </button>
+              ))
+            ) : (
+              <p className="muted-copy">Tags appear as you write.</p>
+            )}
+          </div>
+        </section>
+
+        <div className="sidebar-footer">
+          <StatusIndicator />
+          <button className="install-card" onClick={onInstall} disabled={!canInstall}>
+            <Download size={16} aria-hidden="true" />
+            {canInstall ? 'Install PWA' : 'Offline ready'}
+          </button>
+        </div>
+      </aside>
+    </>
   )
 }
